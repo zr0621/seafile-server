@@ -32,6 +32,10 @@ function usage () {
     echo
     echo "  $(basename ${script_name}) { start <port> | stop | restart <port> }"
     echo
+    echo "To run seahub locally:"
+    echo
+    echo "  $(basename ${script_name}) { start-locally <port> | stop | restart-locally <port> }"
+    echo
     echo "To run seahub in fastcgi:"
     echo
     echo "  $(basename ${script_name}) { start-fastcgi <port> | stop | restart-fastcgi <port> }"
@@ -42,7 +46,9 @@ function usage () {
 
 # Check args
 if [[ $1 != "start" && $1 != "stop" && $1 != "restart" \
-    && $1 != "start-fastcgi" && $1 != "restart-fastcgi" && $1 != "clearsessions" && $1 != "python-env" ]]; then
+    && $1 != "start-locally" && $1 != "restart-locally" \
+    && $1 != "start-fastcgi" && $1 != "restart-fastcgi" \
+    && $1 != "clearsessions" && $1 != "python-env" ]]; then
     usage;
     exit 1;
 fi
@@ -108,7 +114,9 @@ function validate_port () {
     fi
 }
 
-if [[ ($1 == "start" || $1 == "restart" || $1 == "start-fastcgi" || $1 == "restart-fastcgi") \
+if [[ ($1 == "start" || $1 == "restart" \
+    || $1 == "start-locally" || $1 == "restart-locally" \
+    || $1 == "start-fastcgi" || $1 == "restart-fastcgi") \
     && ($# == 2 || $# == 1) ]]; then
     if [[ $# == 2 ]]; then
         port=$2
@@ -159,6 +167,24 @@ function start_seahub () {
     echo "Starting seahub at port ${port} ..."
     check_init_admin;
     $PYTHON $gunicorn_exe seahub.wsgi:application -c "${gunicorn_conf}" -b "0.0.0.0:${port}" --preload
+
+    # Ensure seahub is started successfully
+    sleep 5
+    if ! pgrep -f "seahub.wsgi:application" 2>/dev/null 1>&2; then
+        printf "\033[33mError:Seahub failed to start.\033[m\n"
+        echo "Please try to run \"./seahub.sh start\" again"
+        exit 1;
+    fi
+    echo
+    echo "Seahub is started"
+    echo
+}
+
+function start_seahub_locally () {
+    before_start;
+    echo "Starting seahub at port ${port} ..."
+    check_init_admin;
+    $PYTHON $gunicorn_exe seahub.wsgi:application -c "${gunicorn_conf}" -b "127.0.0.1:${port}" --preload
 
     # Ensure seahub is started successfully
     sleep 5
@@ -269,6 +295,9 @@ case $1 in
     "start" )
         start_seahub;
         ;;
+    "start-locally" )
+        start_seahub_locally;
+        ;;
     "start-fastcgi" )
         start_seahub_fastcgi;
         ;;
@@ -279,6 +308,11 @@ case $1 in
         stop_seahub
         sleep 2
         start_seahub
+        ;;
+    "restart-locally" )
+        stop_seahub
+        sleep 2
+        start_seahub_locally;
         ;;
     "restart-fastcgi" )
         stop_seahub
