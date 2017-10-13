@@ -19,12 +19,13 @@ default_ccnet_conf_dir=${TOPDIR}/ccnet
 central_config_dir=${TOPDIR}/conf
 
 manage_py=${INSTALLPATH}/seahub/manage.py
-gunicorn_conf=${INSTALLPATH}/runtime/seahub.conf
-pidfile=${INSTALLPATH}/runtime/seahub.pid
-errorlog=${INSTALLPATH}/runtime/error.log
-accesslog=${INSTALLPATH}/runtime/access.log
-gunicorn_exe=${INSTALLPATH}/seahub/thirdpart/gunicorn
 
+gunicorn_exe=${INSTALLPATH}/seahub/thirdpart/gunicorn
+gunicorn_conf=${TOPDIR}/conf/gunicorn.conf
+pidfile=${TOPDIR}/pids/seahub.pid
+
+errorlog=${TOPDIR}/logs/fastcgi_error.log
+accesslog=${TOPDIR}/logs/fastcgi_access.log
 
 script_name=$0
 function usage () {
