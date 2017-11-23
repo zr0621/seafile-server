@@ -827,6 +827,7 @@ seafile_get_dirent_by_path (const char *repo_id, const char *path,
  */
 GList *
 seafile_list_file_revisions (const char *repo_id,
+                             const char *commit_id,
                              const char *path,
                              int max_revision,
                              int limit,

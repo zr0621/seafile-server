@@ -389,6 +389,7 @@ seaf_commit_manager_traverse_commit_tree_with_limit (SeafCommitManager *mgr,
     commit = seaf_commit_manager_get_commit (mgr, repo_id, version, head);
     if (!commit) {
         seaf_warning ("Failed to find commit %s.\n", head);
+        g_hash_table_destroy (commit_hash);
         return FALSE;
     }
 
@@ -413,12 +414,6 @@ seaf_commit_manager_traverse_commit_tree_with_limit (SeafCommitManager *mgr,
             }
         }
 
-        /* Stop when limit is reached. If limit < 0, there is no limit; */
-        if (limit > 0 && ++count == limit) {
-            seaf_commit_unref (commit);
-            break;
-        }
-        
         if (stop) {
             seaf_commit_unref (commit);
             /* stop traverse down from this commit,
@@ -448,6 +443,14 @@ seaf_commit_manager_traverse_commit_tree_with_limit (SeafCommitManager *mgr,
             }
         }
         seaf_commit_unref (commit);
+
+        /* Stop when limit is reached and don't stop at unmerged branch.
+         * If limit < 0, there is no limit;
+         */
+        if (limit > 0 && ++count >= limit && (!list || !list->next)) {
+            seaf_commit_unref (commit);
+            break;
+        }
     }
 
 out:

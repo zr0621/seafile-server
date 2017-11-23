@@ -513,6 +513,7 @@ seaf_repo_manager_list_file_revisions (SeafRepoManager *mgr,
                                        int limit,
                                        int show_days,
                                        gboolean got_latest,
+                                       gboolean got_second,
                                        GError **error);
 
 GList *

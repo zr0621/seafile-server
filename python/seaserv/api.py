@@ -305,10 +305,11 @@ class SeafileAPI(object):
         """
         return seafserv_threaded_rpc.get_deleted(repo_id, show_days, path, scan_stat, limit)
 
-    def get_file_revisions(self, repo_id, path, max_revision, limit, show_days=-1):
+    def get_file_revisions(self, repo_id, commit_id, path, max_revision, limit, show_days=-1):
         """
         Get revisions of a file.
 
+        @commit_id: start traversing from this commit
         @max_revision: maximum number of revisions returned
         @limit: maximum number of commits to traverse when looking for revisions
         @show_days: only return revisions in the @show_days
@@ -320,7 +321,7 @@ class SeafileAPI(object):
         @rev_renamed_old_path: set if this revision is made by a rename operation.
                                It's set to the old path before rename.
         """
-        return seafserv_threaded_rpc.list_file_revisions(repo_id, path,
+        return seafserv_threaded_rpc.list_file_revisions(repo_id, commit_id, path,
                                                          max_revision, limit,
                                                          show_days)
 

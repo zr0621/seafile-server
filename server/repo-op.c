@@ -4754,6 +4754,7 @@ struct CollectRevisionParam {
      */
     gint64 truncate_time;
     gboolean got_latest;
+    gboolean got_second;
 
     GError **error;
 };
@@ -5011,13 +5012,14 @@ collect_file_revisions (SeafCommit *commit, void *vdata, gboolean *stop)
 
     if (data->got_latest &&
         data->truncate_time > 0 &&
-        (gint64)(commit->ctime) < data->truncate_time)
+        (gint64)(commit->ctime) < data->truncate_time &&
+        data->got_second)
     {
         *stop = TRUE;
         return TRUE;
     }
 
-    if (data->max_revision > 0 && data->n_commits > data->max_revision) {
+    if (data->max_revision > 0 && data->n_commits >= data->max_revision) {
         *stop = TRUE;
         return TRUE;
     }
@@ -5100,9 +5102,12 @@ collect_file_revisions (SeafCommit *commit, void *vdata, gboolean *stop)
         }
     }
 
-    if (!data->got_latest)
+    if (!data->got_latest) {
         data->got_latest = TRUE;
-
+    } else {
+        if (!data->got_second)
+            data->got_second = TRUE;
+    }
     add_revision_info (data, commit, file_info->file_id, file_info->file_size);
 
 out:
@@ -5282,6 +5287,7 @@ seaf_repo_manager_list_file_revisions (SeafRepoManager *mgr,
                                        int limit,
                                        int show_days,
                                        gboolean got_latest,
+                                       gboolean got_second,
                                        GError **error)
 {
     SeafRepo *repo = NULL;
@@ -5327,6 +5333,7 @@ seaf_repo_manager_list_file_revisions (SeafRepoManager *mgr,
     data.file_id_list = NULL;
     data.file_size_list = NULL;
     data.got_latest = got_latest;
+    data.got_second = got_second;
 
     /* A hash table to cache caculated file info of <path> in <commit> */
     data.file_info_cache = g_hash_table_new_full (g_str_hash, g_str_equal,
@@ -5362,20 +5369,42 @@ seaf_repo_manager_list_file_revisions (SeafRepoManager *mgr,
     ret = convert_rpc_commit_list (commit_list, file_id_list, file_size_list,
                                    is_renamed, old_path);
 
+    int remaining_max = -1, remaining_limit = -1;
+    if (max_revision > 0) {
+        remaining_max = max_revision - g_list_length(commit_list);
+        if (remaining_max <= 0) {
+            g_free (parent_id);
+            g_free (old_path);
+            goto out;
+        }
+    }
+    /* Make sure the number of returned commits is less than limit */
+    /* but the commits we traversed may more than limit when handling renamed file */
+    if (limit > 0) {
+        remaining_limit = limit - g_list_length(commit_list);
+        if (remaining_limit <= 0) {
+            g_free (parent_id);
+            g_free (old_path);
+            goto out;
+        }
+    }
+
     if (is_renamed) {
         if (ret) {
             // if previous scan got revision then set got_latest True for renamend scan
             /* Get the revisions of the old path, starting from parent commit. */
             old_revisions = seaf_repo_manager_list_file_revisions (mgr, repo_id,
                                                                    parent_id, old_path,
-                                                                   -1, -1, show_days,
-                                                                   TRUE, error);
+                                                                   remaining_max,
+                                                                   remaining_limit, show_days,
+                                                                   TRUE, data.got_second, error);
         } else {
             /* Get the revisions of the old path, starting from parent commit. */
             old_revisions = seaf_repo_manager_list_file_revisions (mgr, repo_id,
                                                                    parent_id, old_path,
-                                                                   -1, -1, show_days,
-                                                                   FALSE, error);
+                                                                   remaining_max,
+                                                                   remaining_limit, show_days,
+                                                                   FALSE, data.got_second, error);
         }
         ret = g_list_concat (ret, old_revisions);
         g_free (parent_id);
